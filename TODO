@@ -1,0 +1,22 @@
+- Create a new GitHub repository:
+
+  https://github.com/new
+
+  Repository name: smartcall
+
+  $ git remote add origin git@github.com:kalekundert/smartcall.git
+  $ git push -u origin master
+
+- Create a "pending" trusted publisher:
+
+  https://pypi.org/manage/account/publishing/
+
+  PyPI project name: smartcall
+  Owner:             kalekundert
+  Repository name:   smartcall
+  Workflow name:     release.yml
+
+- Add Codecov token to GitHub:
+
+  https://app.codecov.io/gh/kalekundert/smartcall/new
+  https://github.com/kalekundert/smartcall/settings/secrets/actions/new
