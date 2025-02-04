@@ -19,7 +19,7 @@ nitpicky = True
 ## Extensions
 
 extensions = [
-        'autoclasstoc',
+        'myst_parser',
         'sphinx.ext.autodoc',
         'sphinx.ext.autosummary',
         'sphinx.ext.viewcode',
