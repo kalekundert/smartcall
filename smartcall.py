@@ -3,7 +3,7 @@
 import inspect
 from typing import Callable, Any, Union
 
-__version__ = '0.0.0'
+__version__ = '0.1.0'
 
 class Argument:
 
