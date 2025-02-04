@@ -23,7 +23,7 @@ test = [
 doc = [
   'sphinx',
   'sphinx_rtd_theme',
-  'autoclasstoc',
+  'myst_parser',
 ]
 
 [project.urls]
