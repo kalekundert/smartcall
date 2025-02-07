@@ -127,40 +127,52 @@ def call(f: Callable[..., Any], *args: Union[PosOnly, PosOrKw, KwOnly]) -> Any:
         f:
             The function to call.  This can be any callable.
 
-            Note that :func:`inspect.signature` is used to determine which 
-            arguments the function expects.  This might not work as expected if 
-            the function is wrapped by something that changes its signature.  A 
-            common example of this is :func:`functools.partial`.  Consider the 
-            following example:
-
-                >>> from functools import partial
-                >>> def f(a, b):
-                ...     return a, b
-                ...
-                >>> g1 = partial(f, 1)
-                >>> g2 = partial(f, a=1)
-
-            While ``g1`` and ``g2`` both supply the first argument to ``f``, 
-            the former does so in a way that allows additional positional 
-            arguments to be passed, while the latter doesn't.  In other words, 
-            the way that :func:`~functools.partial` is invoked can affect the 
-            signature of the resulting callable.
-
         args:
             The arguments to pass to the function.  Any number of arguments can 
             be specified.  Each argument must be an instance of `PosOnly`, 
             `PosOrKw`, or `KwOnly`.  These objects determine how each argument 
             can be passed to the function.  Refer to the above links for more 
-            details.  Positional argument are preferred, when there's an 
-            option, because they don't require that the function use the same 
-            argument names as the caller.
-
-            It's ok to specify more arguments than the function expects.  Any 
-            arguments that are incompatible with the given function signature, 
-            and that are not marked as "required", will simply not be used.
+            details.  It's ok to specify more arguments than the function 
+            expects.  Any arguments that are incompatible with the given 
+            function signature, and that are not marked as "required", will 
+            simply not be used.
 
     Returns:
         The result of calling the given function with the given arguments.
+
+    Note that :func:`inspect.signature` is used to determine which arguments 
+    the function expects.  If a signature can't be determined, the function 
+    will be called with all of the required arguments and none of the optional 
+    ones.  This is a problem for a number of built-in functions, including:
+
+    - :class:`int`
+    - :class:`bool`
+    - :class:`str`
+    - :func:`map`
+    - :func:`filter`
+    - :func:`max`
+    - :func:`min`
+
+    See `#107161`__ for more information.
+
+    __ https://github.com/python/cpython/issues/107161
+
+    Another potentially confusing case is when the function is wrapped by 
+    something that changes its signature.  A common example of this is 
+    :func:`functools.partial`.  Consider the following example:
+
+        >>> from functools import partial
+        >>> def f(a, b):
+        ...     return a, b
+        ...
+        >>> g1 = partial(f, 1)
+        >>> g2 = partial(f, a=1)
+
+    While ``g1`` and ``g2`` both supply the first argument to ``f``, the former 
+    does so in a way that allows additional positional arguments to be passed, 
+    while the latter doesn't.  In other words, the way that 
+    :func:`~functools.partial` is invoked can affect the signature of the 
+    resulting callable.
 
     Example:
 
@@ -178,7 +190,9 @@ def call(f: Callable[..., Any], *args: Union[PosOnly, PosOrKw, KwOnly]) -> Any:
             ...     KwOnly(c=2),
             ... )
             (1, 2)
+
     """
+
     args = list(args)
     _check_args(args)
 
@@ -192,7 +206,14 @@ def call(f: Callable[..., Any], *args: Union[PosOnly, PosOrKw, KwOnly]) -> Any:
     def has_kw_param(name):
         return name in kw_names
 
-    sig = inspect.signature(f)
+    try:
+        sig = inspect.signature(f)
+    except ValueError:
+        # This error means that we couldn't get the signature for some reason 
+        # (usually because the function in question is a builtin).  Without 
+        # that information, the best we can do is to call the function with all 
+        # of the required arguments.
+        return _call_with_required_only(f, args)
 
     for param in sig.parameters.values():
         match param.kind:
@@ -242,6 +263,20 @@ def call(f: Callable[..., Any], *args: Union[PosOnly, PosOrKw, KwOnly]) -> Any:
         if arg.required:
             name = f'`{arg.name}`' if arg.keyword_ok else 'positional'
             raise TypeError(f"{f.__name__}() missing required {name} argument.")
+
+    return f(*pos_args, **kw_args)
+
+def _call_with_required_only(f, args):
+    pos_args = []
+    kw_args = {}
+
+    for arg in args:
+        if not arg.required:
+            continue
+        if arg.positional_ok:
+            pos_args.append(arg.value)
+        else:
+            kw_args[arg.name] = arg.value
 
     return f(*pos_args, **kw_args)
 

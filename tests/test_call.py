@@ -330,6 +330,42 @@ def test_call_var_kw():
     with pytest.raises(TypeError):
         call(f, PosOnly(1, required=True), KwOnly(b=2, required=True))
 
+def test_call_int():
+    # `inspect.signature` doesn't work for some built-in functions, like `int`.  
+    # See python/cpython#107161 for more details.  In such cases, the best we 
+    # can do is to pass all the required arguments.
+
+    # 0 arguments:
+    assert call(int) == 0
+
+    # 1 argument:
+    assert call(int, PosOnly(1)) == 0  # [1]
+    assert call(int, PosOnly(1, required=True)) == 1
+
+    assert call(int, PosOrKw(x=1)) == 0  # [1]
+    assert call(int, PosOrKw(x=1, required=True)) == 1
+
+    assert call(int, KwOnly(x=1)) == 0
+
+    with pytest.raises(TypeError):
+        call(int, KwOnly(x=1, required=True))
+
+    # 2 arguments:
+    # Note that `int` actually can take two arguments, but only if the first is 
+    # a string (in which case the second is the base).
+    with pytest.raises(TypeError):
+        call(int, PosOnly(1, required=True), PosOnly(2, required=True))
+    with pytest.raises(TypeError):
+        call(int, PosOnly(1, required=True), PosOrKw(x=2, required=True))
+    with pytest.raises(TypeError):
+        call(int, PosOnly(1, required=True), KwOnly(x=2, required=True))
+    with pytest.raises(TypeError):
+        call(int, PosOrKw(x=1, required=True), PosOrKw(y=2, required=True))
+
+    # [1] Although we specified 1 as a positional argument, it wasn't used 
+    #     because we can't confirm that the function accepts any positional 
+    #     arguments, so we get the default 0 value.
+
 def test_call_partial():
     from functools import partial
 
