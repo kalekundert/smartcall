@@ -28,7 +28,7 @@ arguments.  Note that the callback only accepts the first keyword argument:
 ...
 ...     # This argument is required, so if the callback can't accept it, an
 ...     # error will be raised.
-...     PosOnly(1, required=True), KwOnly('b', 2))
+...     PosOnly(1, required=True),
 ...
 ...     # These arguments are not required, so they will only be passed to the
 ...     # callback if it has a compatible signature.
