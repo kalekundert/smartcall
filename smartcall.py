@@ -32,7 +32,7 @@ class PosOnly(Argument):
 
     Example:
 
-        >>> from smartcall import PosOnly, call
+        >>> from smartcall import call, PosOnly
         >>> def f(a):
         ...     return a
         ...
@@ -52,9 +52,12 @@ class PosOrKw(Argument):
     A value that can be passed as either a positional or a keyword argument.
 
     Arguments:
-        kwarg:
-            A single name-value pair.  The name is the "keyword" that will 
+        name:
+            The name of the keyword argument, i.e. the "keyword" that will 
             be used when passing this argument as a keyword argument.
+
+        value:
+            The value to pass to the function.
 
         required:
             What to do when passing this argument to a function with an 
@@ -67,34 +70,39 @@ class PosOrKw(Argument):
 
     Examples:
 
-        >>> from smartcall import PosOnly, call
+        >>> from smartcall import call, PosOrKw
         >>> def f(a):
         ...     return a
         ...
-        >>> call(f, PosOrKw(a=1))
+        >>> call(f, PosOrKw('a', 1))
         1
 
         Note that the name given to the argument doesn't need to match the 
         function's signature, if the argument is to be passed positionally:
 
-        >>> call(f, PosOrKw(b=1))
+        >>> call(f, PosOrKw('b', 1))
         1
     """
 
-    def __init__(self, *, required: bool = False, **kwarg: Any):
+    def __init__(self, name: str, value: Any, *, required: bool = False):
         super().__init__(True, True, required)
-        self.name, self.value = _parse_kwarg(kwarg)
+        self.name = name
+        self.value = value
 
     def __repr__(self):
-        return _format_repr(self, [f'{self.name}={self.value!r}'])
+        return _format_repr(self, [repr(self.name), repr(self.value)])
 
 class KwOnly(Argument):
     """
     A value that must be passed as a keyword argument.
 
     Arguments:
-        kwarg:
-            A single name-value pair.
+        name:
+            The name of the keyword argument, i.e. the "keyword" that will 
+            be used when passing this argument as a keyword argument.
+
+        value:
+            The value to pass to the function.
 
         required:
             What to do when passing this argument to a function with an 
@@ -103,20 +111,21 @@ class KwOnly(Argument):
 
     Example:
 
-        >>> from smartcall import PosOnly, call
+        >>> from smartcall import call, KwOnly
         >>> def f(a):
         ...     return a
         ...
-        >>> call(f, KwOnly(a=1))
+        >>> call(f, KwOnly('a', 1))
         1
     """
 
-    def __init__(self, *, required: bool = False, **kwarg: Any):
+    def __init__(self, name: str, value: Any, *, required: bool = False):
         super().__init__(False, True, required)
-        self.name, self.value = _parse_kwarg(kwarg)
+        self.name = name
+        self.value = value
 
     def __repr__(self):
-        return _format_repr(self, [f'{self.name}={self.value!r}'])
+        return _format_repr(self, [repr(self.name), repr(self.value)])
 
 def call(f: Callable[..., Any], *args: Union[PosOnly, PosOrKw, KwOnly]) -> Any:
     """
@@ -179,15 +188,15 @@ def call(f: Callable[..., Any], *args: Union[PosOnly, PosOrKw, KwOnly]) -> Any:
         Invoke a callback function with one required positional argument and 
         several optional keyword arguments:
 
-            >>> from smartcall import PosOnly, PosOrKw, KwOnly, call
+            >>> from smartcall import call, PosOnly, PosOrKw, KwOnly
             >>> def my_callback(a, b):
             ...     return a, b
             ...
             >>> call(
             ...     my_callback,
             ...     PosOnly(1, required=True),  # the required argument
-            ...     KwOnly(b=2),                # the optional arguments
-            ...     KwOnly(c=2),
+            ...     KwOnly('b', 2),             # the optional arguments
+            ...     KwOnly('c', 3),
             ... )
             (1, 2)
 
@@ -310,12 +319,6 @@ def _check_args(args):
             if arg.name in used_names:
                 raise TypeError(f"cannot reuse keyword `{arg.name}`")
             used_names.add(arg.name)
-
-def _parse_kwarg(kwarg):
-    if len(kwarg) != 1:
-        raise ValueError("must specify exactly one key-value pair")
-
-    return next(iter(kwarg.items()))
 
 def _format_repr(self, arg_strs):
     if self.required: arg_strs.append('required=True')
